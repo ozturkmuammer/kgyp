@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  kgyp-database:
+    image: postgres:13
+    container_name: kgyp-postgres
+    environment:
+      POSTGRES_DB: kgyp_db
+      POSTGRES_USER: kgyp_user
+      POSTGRES_PASSWORD: kgyp_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/pgdata
+      - ./database/migrations:/docker-entrypoint-initdb.d
+    networks:
+      - kgyp-network
+    restart: unless-stopped
+
+  # Redis Cache
+  kgyp-redis:
+    image: redis:alpine
+    container_name: kgyp-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - kgyp-network
+    restart: unless-stopped
+
+  # PgAdmin (Database Management)
+  kgyp-pgadmin:
+    image: dpage/pgadmin4
+    container_name: kgyp-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@kgyp.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "5050:80"
+    depends_on:
+      - kgyp-database
+    networks:
+      - kgyp-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  kgyp-network:
+    driver: bridge
