@@ -3,12 +3,12 @@ package com.kgyp.kgypsystem.entity;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.UUID;
 import java.util.List;
 import com.kgyp.kgypsystem.entity.KiraArtisMetodu;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-// ❌ GEREKSIZ IMPORT KALDIRILDI: import com.kgyp.kgypsystem.controller.FinansalHareketController;
 
 @Entity
 @Table(name = "sozlesmeler")
@@ -59,6 +59,31 @@ public class Sozlesme {
     // Depozito tutarı
     private BigDecimal depozito;
 
+    // ✅ EKLENDİ: Timestamp alanları
+    @Column(name = "olusturma_tarihi", nullable = false, updatable = false)
+    private LocalDateTime olusturmaTarihi;
+
+    @Column(name = "guncelleme_tarihi")
+    private LocalDateTime guncellemeTarihi;
+
+    // ✅ EKLENDİ: JPA Lifecycle methods
+    @PrePersist
+    protected void onCreate() {
+        olusturmaTarihi = LocalDateTime.now();
+        guncellemeTarihi = LocalDateTime.now();
+        if (aktifMi == null) {
+            aktifMi = true;
+        }
+        if (kiraArtisiYapildi2025 == null) {
+            kiraArtisiYapildi2025 = false;
+        }
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        guncellemeTarihi = LocalDateTime.now();
+    }
+
     // Dokuman ilişkisi
     @OneToMany(mappedBy = "sozlesme", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnoreProperties({"sozlesme", "hibernateLazyInitializer", "handler"})
@@ -80,22 +105,21 @@ public class Sozlesme {
         this.sozlesmeBitisTarihi = bitis;
     }
 
-    // Test için gerekli metodlar
-    public UUID getId() {
-        return sozlesmeId;
-    }
-
-    public void setId(UUID id) {
-        this.sozlesmeId = id;
-    }
-
-    // Getters and Setters
+    // Getter/Setter methods
     public UUID getSozlesmeId() {
         return sozlesmeId;
     }
 
     public void setSozlesmeId(UUID sozlesmeId) {
         this.sozlesmeId = sozlesmeId;
+    }
+
+    public UUID getId() {
+        return sozlesmeId;
+    }
+
+    public void setId(UUID id) {
+        this.sozlesmeId = id;
     }
 
     public GayrimenkulVarligi getGayrimenkulVarligi() {
@@ -200,6 +224,23 @@ public class Sozlesme {
 
     public void setDepozito(BigDecimal depozito) {
         this.depozito = depozito;
+    }
+
+    // ✅ EKLENDİ: Yeni timestamp alanlarının getters/setters
+    public LocalDateTime getOlusturmaTarihi() {
+        return olusturmaTarihi;
+    }
+
+    public void setOlusturmaTarihi(LocalDateTime olusturmaTarihi) {
+        this.olusturmaTarihi = olusturmaTarihi;
+    }
+
+    public LocalDateTime getGuncellemeTarihi() {
+        return guncellemeTarihi;
+    }
+
+    public void setGuncellemeTarihi(LocalDateTime guncellemeTarihi) {
+        this.guncellemeTarihi = guncellemeTarihi;
     }
 
     public List<Dokuman> getDokumanlar() {

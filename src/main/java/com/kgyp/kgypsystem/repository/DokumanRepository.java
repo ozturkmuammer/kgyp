@@ -23,8 +23,6 @@ public interface DokumanRepository extends JpaRepository<Dokuman, Long> {
 
     // Aktif dokümanlar
     List<Dokuman> findByAktifTrue();
-
-    // Pasif dokümanlar
     List<Dokuman> findByAktifFalse();
 
     // Dosya tipine göre dokümanlar
@@ -33,8 +31,8 @@ public interface DokumanRepository extends JpaRepository<Dokuman, Long> {
     // Yükleyen kullanıcıya göre dokümanlar
     List<Dokuman> findByYukleyenKullaniciContainingIgnoreCase(String kullanici);
 
-    // Son yüklenen dokümanlar - Düzeltilmiş Top 10 sorgusu
-    @Query("SELECT d FROM Dokuman d ORDER BY d.yuklenmeTarihi DESC LIMIT 10")
+    // Son yüklenen dokümanlar - H2 uyumlu
+    @Query(value = "SELECT * FROM dokuman ORDER BY yuklenme_tarihi DESC LIMIT 10", nativeQuery = true)
     List<Dokuman> findTop10ByOrderByYuklenmeTarihiDesc();
 
     // Dosya adı veya açıklamada arama

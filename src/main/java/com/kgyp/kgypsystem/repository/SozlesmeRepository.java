@@ -13,31 +13,26 @@ import java.util.UUID;
 @Repository
 public interface SozlesmeRepository extends JpaRepository<Sozlesme, UUID> {
 
-    // ==================== EKSİK METODLAR EKLENDİ ====================
+    // ==================== TEMEL METODLAR ====================
 
-    // Aktif sözleşmeler
     List<Sozlesme> findByAktifMiTrue();
-
-    // Aktif sözleşme sayısı
     long countByAktifMiTrue();
 
-    // Yakında bitecek sözleşmeler
     @Query("SELECT s FROM Sozlesme s WHERE s.sozlesmeBitisTarihi <= :tarih AND s.aktifMi = true ORDER BY s.sozlesmeBitisTarihi ASC")
     List<Sozlesme> findYakindaBitecekSozlesmeler(@Param("tarih") LocalDate tarih);
 
-    // Kira artışı yapılmamış sözleşmeler
     List<Sozlesme> findByKiraArtisiYapildi2025FalseAndAktifMiTrue();
-
-    // Bugün kira ödemesi olan sözleşmeler
     List<Sozlesme> findByKiraOdemeGunu(Integer gun);
 
-    // Toplam aylık kira geliri
     @Query("SELECT COALESCE(SUM(s.aylikKiraTutari), 0.0) FROM Sozlesme s WHERE s.aktifMi = true")
     Double toplamAylikKiraGeliri();
 
-    // ==================== DASHBOARD SORGULARI ====================
+    // ==================== DASHBOARD METODLARI - EKSİK OLANLAR ====================
 
-    @Query("SELECT COUNT(s) FROM Sozlesme s WHERE s.sozlesmeDurumu = :durum")
+    @Query("SELECT COUNT(s) FROM Sozlesme s WHERE " +
+            "CASE WHEN :durum = 'AKTIF' THEN s.aktifMi = true " +
+            "     WHEN :durum = 'PASIF' THEN s.aktifMi = false " +
+            "     ELSE s.aktifMi = s.aktifMi END")
     Long countBySozlesmeDurumu(@Param("durum") String durum);
 
     @Query("SELECT gv.isyeriAdi, s.guncellemeTarihi FROM Sozlesme s " +
@@ -56,31 +51,13 @@ public interface SozlesmeRepository extends JpaRepository<Sozlesme, UUID> {
             "WHERE s.kiraArtisiYapildi2025 = false AND s.aktifMi = true")
     List<Object[]> findKiraArtisiYapilmayanlar();
 
-    @Query("SELECT s FROM Sozlesme s WHERE s.kiraArtisiYapildi2025 = false AND s.aktifMi = true")
-    List<Sozlesme> findKiraArtisiYapilmayanSozlesmeler();
-
-    // ==================== KİRA ARTIŞI TARİHLERİ ====================
-
-    @Query("SELECT gv.isyeriAdi, s.kiraOdemeGunu FROM Sozlesme s " +
-            "JOIN s.gayrimenkulVarligi gv WHERE DAY(CURRENT_DATE) = s.kiraOdemeGunu - 30")
-    List<Object[]> findYaklaşanKiraOdemeleri();
-
-    @Query("SELECT s FROM Sozlesme s WHERE s.kiraArtisMetodu = 'TUFE' AND s.aktifMi = true")
-    List<Sozlesme> findTufeBazliSozlesmeler();
-
     // ==================== PERFORMANS METRİKLERİ ====================
 
     @Query("SELECT COUNT(s) * 100.0 / (SELECT COUNT(s2) FROM Sozlesme s2) FROM Sozlesme s " +
             "WHERE s.aktifMi = true")
     Double getSozlesmeYenilemeOrani();
 
-    @Query("SELECT AVG(DATEDIFF(day, s.sozlesmeBaslangicTarihi, s.sozlesmeBitisTarihi)) FROM Sozlesme s WHERE s.aktifMi = true")
-    Double getOrtalamaSozlesmeSuresi();
-
     // ==================== FİNANSAL HESAPLAMALAR ====================
-
-    @Query("SELECT SUM(s.aylikKiraTutari) FROM Sozlesme s WHERE s.aktifMi = true")
-    Long getTotalAylikKiraGeliri();
 
     @Query("SELECT gv.sehir, SUM(s.aylikKiraTutari) FROM Sozlesme s " +
             "JOIN s.gayrimenkulVarligi gv WHERE s.aktifMi = true " +

@@ -64,7 +64,7 @@ public interface GayrimenkulVarligiRepository extends JpaRepository<GayrimenkulV
     @Query("SELECT g FROM GayrimenkulVarligi g WHERE g.kullanimDurumu = 'TAHSISLI_KULLANIM'")
     List<GayrimenkulVarligi> findTahsisliGayrimenkuller();
 
-    // ==================== VERİ KALİTESİ ====================
+    // ==================== VERİ KALİTESİ - EKSİK METHOD ====================
 
     @Query("SELECT g FROM GayrimenkulVarligi g WHERE " +
             "g.isyeriAdi IS NULL OR g.isyeriAdi = '' OR " +
@@ -79,7 +79,6 @@ public interface GayrimenkulVarligiRepository extends JpaRepository<GayrimenkulV
     @Query("SELECT g.sehir, COUNT(g) FROM GayrimenkulVarligi g GROUP BY g.sehir ORDER BY COUNT(g) DESC")
     List<Object[]> countBySehir();
 
-    // ✅ EKLENDİ: Top 10 şehir (Dashboard için)
     @Query("SELECT g.sehir, COUNT(g) FROM GayrimenkulVarligi g GROUP BY g.sehir ORDER BY COUNT(g) DESC LIMIT 10")
     List<Object[]> countBySehirTop10();
 

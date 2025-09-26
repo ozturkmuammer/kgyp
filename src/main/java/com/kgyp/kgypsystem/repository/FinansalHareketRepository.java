@@ -15,15 +15,9 @@ import java.util.UUID;
 @Repository
 public interface FinansalHareketRepository extends JpaRepository<FinansalHareket, UUID> {
 
-    // ==================== EKSİK METODLAR EKLENDİ ====================
-
-    // Gayrimenkul bazında hareketler
+    // Temel metodlar
     List<FinansalHareket> findByGayrimenkulVarligi_VarlikId(UUID varlikId);
-
-    // Hareket tipine göre
     List<FinansalHareket> findByHareketTipi(HareketTipi hareketTipi);
-
-    // Onay bekleyen hareketler
     List<FinansalHareket> findByOnaylanmisFalse();
 
     // Tarih aralığında hareketler
@@ -36,78 +30,38 @@ public interface FinansalHareketRepository extends JpaRepository<FinansalHareket
     List<FinansalHareket> findKiraGeliriByDonem(@Param("donem") String donem);
 
     // Toplam gelir
-    @Query("SELECT COALESCE(SUM(f.tutar), 0) FROM FinansalHareket f WHERE f.onaylanmis = true AND f.hareketTipi IN ('KIRA_GELIRI', 'DEPOZITO_ALINDI', 'DIGER_GELIR')")
+    @Query("SELECT COALESCE(SUM(f.tutar), 0) FROM FinansalHareket f WHERE f.onaylanmis = true AND " +
+            "f.hareketTipi IN ('KIRA_GELIRI', 'DEPOZITO_ALINDI', 'DIGER_GELIR')")
     BigDecimal toplamGelir();
 
     // Toplam gider
-    @Query("SELECT COALESCE(SUM(f.tutar), 0) FROM FinansalHareket f WHERE f.onaylanmis = true AND f.hareketTipi IN ('BAKIM_ONARIM', 'VERGI_HARCI', 'SIGORTA', 'YONETIM', 'AIDAT', 'DIGER_GIDER')")
+    @Query("SELECT COALESCE(SUM(f.tutar), 0) FROM FinansalHareket f WHERE f.onaylanmis = true AND " +
+            "f.hareketTipi IN ('BAKIM_ONARIM', 'VERGI_HARCI', 'SIGORTA', 'YONETIM', 'AIDAT', 'DIGER_GIDER')")
     BigDecimal toplamGider();
 
-    // Son hareketler
-    @Query("SELECT f FROM FinansalHareket f ORDER BY f.hareketTarihi DESC LIMIT 10")
+    // Son hareketler - H2 uyumlu
+    @Query(value = "SELECT * FROM finansal_hareketler ORDER BY hareket_tarihi DESC LIMIT 10", nativeQuery = true)
     List<FinansalHareket> findTop10ByOrderByHareketTarihiDesc();
 
-    // ==================== RAPORLAMA METODLARI ====================
-
-    // Aylık kira geliri raporu
-    @Query("SELECT YEAR(f.hareketTarihi), MONTH(f.hareketTarihi), SUM(f.tutar) " +
-            "FROM FinansalHareket f WHERE f.hareketTipi = 'KIRA_GELIRI' AND f.onaylanmis = true " +
-            "GROUP BY YEAR(f.hareketTarihi), MONTH(f.hareketTarihi) " +
-            "ORDER BY YEAR(f.hareketTarihi) DESC, MONTH(f.hareketTarihi) DESC")
-    List<Object[]> aylikKiraGeliriRaporu();
-
-    // Hareket tipi bazında toplam
-    @Query("SELECT f.hareketTipi, SUM(f.tutar) FROM FinansalHareket f WHERE f.onaylanmis = true " +
-            "GROUP BY f.hareketTipi ORDER BY SUM(f.tutar) DESC")
-    List<Object[]> hareketTipiBazindaToplam();
-
-    // ==================== AYLIK FİNANSAL HESAPLAMALAR ====================
-
+    // Aylık finansal hesaplamalar - H2 uyumlu
     @Query("SELECT COALESCE(SUM(f.tutar), 0) FROM FinansalHareket f WHERE " +
-            "YEAR(f.hareketTarihi) = :yil AND MONTH(f.hareketTarihi) = :ay AND " +
+            "EXTRACT(YEAR FROM f.hareketTarihi) = :yil AND EXTRACT(MONTH FROM f.hareketTarihi) = :ay AND " +
             "f.hareketTipi IN ('KIRA_GELIRI', 'DEPOZITO_ALINDI', 'DIGER_GELIR') AND f.onaylanmis = true")
     BigDecimal getAylikToplamGelir(@Param("yil") int yil, @Param("ay") int ay);
 
     @Query("SELECT COALESCE(SUM(f.tutar), 0) FROM FinansalHareket f WHERE " +
-            "YEAR(f.hareketTarihi) = :yil AND MONTH(f.hareketTarihi) = :ay AND " +
+            "EXTRACT(YEAR FROM f.hareketTarihi) = :yil AND EXTRACT(MONTH FROM f.hareketTarihi) = :ay AND " +
             "f.hareketTipi IN ('BAKIM_ONARIM', 'VERGI_HARCI', 'SIGORTA', 'YONETIM', 'AIDAT', 'DIGER_GIDER') AND f.onaylanmis = true")
     BigDecimal getAylikToplamGider(@Param("yil") int yil, @Param("ay") int ay);
 
-    // ==================== TRENDler ve ANALİZ ====================
+    // Raporlama metodları - H2 uyumlu
+    @Query("SELECT EXTRACT(YEAR FROM f.hareketTarihi), EXTRACT(MONTH FROM f.hareketTarihi), SUM(f.tutar) " +
+            "FROM FinansalHareket f WHERE f.hareketTipi = 'KIRA_GELIRI' AND f.onaylanmis = true " +
+            "GROUP BY EXTRACT(YEAR FROM f.hareketTarihi), EXTRACT(MONTH FROM f.hareketTarihi) " +
+            "ORDER BY EXTRACT(YEAR FROM f.hareketTarihi) DESC, EXTRACT(MONTH FROM f.hareketTarihi) DESC")
+    List<Object[]> aylikKiraGeliriRaporu();
 
-    @Query("SELECT MONTH(f.hareketTarihi) as ay, SUM(f.tutar) FROM FinansalHareket f WHERE " +
-            "YEAR(f.hareketTarihi) = :yil AND f.hareketTipi = 'KIRA_GELIRI' AND f.onaylanmis = true " +
-            "GROUP BY MONTH(f.hareketTarihi) ORDER BY ay")
-    List<Object[]> getAylikGelirTrendi(@Param("yil") int yil);
-
-    @Query("SELECT MONTH(f.hareketTarihi) as ay, SUM(f.tutar) FROM FinansalHareket f WHERE " +
-            "YEAR(f.hareketTarihi) = :yil AND f.hareketTipi IN ('BAKIM_ONARIM', 'VERGI_HARCI', 'SIGORTA', 'YONETIM', 'AIDAT', 'DIGER_GIDER') AND f.onaylanmis = true " +
-            "GROUP BY MONTH(f.hareketTarihi) ORDER BY ay")
-    List<Object[]> getAylikGiderTrendi(@Param("yil") int yil);
-
-    // ==================== HAREKET TÜRÜ BAZINDA ANALİZ ====================
-
-    @Query("SELECT f.hareketTipi, SUM(f.tutar) FROM FinansalHareket f WHERE " +
-            "YEAR(f.hareketTarihi) = :yil AND f.onaylanmis = true GROUP BY f.hareketTipi ORDER BY SUM(f.tutar) DESC")
-    List<Object[]> getHareketTuruBazindaOzet(@Param("yil") int yil);
-
-    @Query("SELECT gv.sehir, SUM(f.tutar) FROM FinansalHareket f " +
-            "JOIN f.gayrimenkulVarligi gv WHERE f.hareketTipi = 'KIRA_GELIRI' AND f.onaylanmis = true " +
-            "GROUP BY gv.sehir ORDER BY SUM(f.tutar) DESC")
-    List<Object[]> getKiraGeliriBySehir();
-
-    // ==================== SON AKTİVİTELER ====================
-
-    @Query("SELECT gv.isyeriAdi, f.hareketTipi, f.tutar, f.hareketTarihi FROM FinansalHareket f " +
-            "JOIN f.gayrimenkulVarligi gv ORDER BY f.hareketTarihi DESC LIMIT 10")
-    List<Object[]> findSonFinansalHareketler();
-
-    // ==================== PERFORMANS METRİKLERİ ====================
-
-    @Query("SELECT AVG(f.tutar) FROM FinansalHareket f WHERE f.hareketTipi = 'KIRA_GELIRI' AND f.onaylanmis = true")
-    BigDecimal getOrtalamaKiraGeliri();
-
-    @Query("SELECT COUNT(DISTINCT gv.varlikId) FROM FinansalHareket f " +
-            "JOIN f.gayrimenkulVarligi gv WHERE f.hareketTipi = 'KIRA_GELIRI' AND f.onaylanmis = true")
-    Long getGelirGetirenGayrimenkulSayisi();
+    @Query("SELECT f.hareketTipi, SUM(f.tutar) FROM FinansalHareket f WHERE f.onaylanmis = true " +
+            "GROUP BY f.hareketTipi ORDER BY SUM(f.tutar) DESC")
+    List<Object[]> hareketTipiBazindaToplam();
 }

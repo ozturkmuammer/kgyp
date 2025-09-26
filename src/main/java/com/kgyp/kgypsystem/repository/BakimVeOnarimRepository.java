@@ -17,9 +17,7 @@ import java.util.UUID;
 @Repository
 public interface BakimVeOnarimRepository extends JpaRepository<BakimVeOnarim, UUID> {
 
-    // ==================== EKSİK METODLAR EKLENDİ ====================
-
-    // Aktif bakım işlemleri (Service'de kullanılan)
+    // Aktif bakım işlemleri
     @Query("SELECT b FROM BakimVeOnarim b WHERE b.durum IN ('PLANLANMIS', 'BASLANDI', 'DEVAM_EDIYOR', 'BEKLEMEDE') ORDER BY b.oncelik DESC, b.olusturmaTarihi ASC")
     List<BakimVeOnarim> findAktifBakimlar();
 
@@ -43,9 +41,7 @@ public interface BakimVeOnarimRepository extends JpaRepository<BakimVeOnarim, UU
     @Query("SELECT b FROM BakimVeOnarim b WHERE b.garantiBitisTarihi > :tarih AND b.durum = 'TAMAMLANDI'")
     List<BakimVeOnarim> findGarantideOlanBakimlar(@Param("tarih") LocalDateTime tarih);
 
-    // ==================== MEVCUT METODLAR ====================
-
-    // Durum bazında sorgular
+    // Temel sorgular
     List<BakimVeOnarim> findByDurum(BakimDurumu durum);
     List<BakimVeOnarim> findByKategori(BakimKategorisi kategori);
     List<BakimVeOnarim> findByOncelik(OncelikSeviyesi oncelik);
@@ -58,12 +54,11 @@ public interface BakimVeOnarimRepository extends JpaRepository<BakimVeOnarim, UU
     @Query("SELECT b FROM BakimVeOnarim b WHERE LOWER(b.baslik) LIKE LOWER(CONCAT('%', :arama, '%')) OR LOWER(b.aciklama) LIKE LOWER(CONCAT('%', :arama, '%'))")
     List<BakimVeOnarim> findByBaslikOrAciklamaContaining(@Param("arama") String aramaKelimesi);
 
-    // Son eklenen bakımlar
-    @Query("SELECT b FROM BakimVeOnarim b ORDER BY b.olusturmaTarihi DESC LIMIT 10")
+    // Son eklenen bakımlar - H2 uyumlu
+    @Query(value = "SELECT * FROM bakim_ve_onarim ORDER BY olusturma_tarihi DESC LIMIT 10", nativeQuery = true)
     List<BakimVeOnarim> findTop10ByOrderByOlusturmaTarihiDesc();
 
-    // ==================== İSTATİSTİK METODLARI ====================
-
+    // İstatistik metodları
     @Query("SELECT COALESCE(SUM(b.gercekMaliyet), 0) FROM BakimVeOnarim b WHERE b.durum = 'TAMAMLANDI' AND b.gercekMaliyet IS NOT NULL")
     BigDecimal toplamBakimMaliyeti();
 
@@ -74,21 +69,22 @@ public interface BakimVeOnarimRepository extends JpaRepository<BakimVeOnarim, UU
     List<Object[]> durumBazindaBakimSayisi();
 
     // Dashboard için son bakım işlemleri
-    @Query("SELECT gv.isyeriAdi, b.olusturmaTarihi FROM BakimVeOnarim b " +
-            "JOIN b.gayrimenkulVarligi gv ORDER BY b.olusturmaTarihi DESC LIMIT 5")
+    @Query(value = "SELECT g.isyeri_adi, b.olusturma_tarihi FROM bakim_ve_onarim b " +
+            "JOIN gayrimenkul_varliklari g ON b.varlik_id = g.varlik_id " +
+            "ORDER BY b.olusturma_tarihi DESC LIMIT 5", nativeQuery = true)
     List<Object[]> findSonBakimIslemler();
 
     // Dashboard için durum bazında sayım
     @Query("SELECT COUNT(b) FROM BakimVeOnarim b WHERE b.durum = :durum")
     Long countByDurum(@Param("durum") String durum);
 
-    // Aylık tamamlanan bakım sayısı
+    // Aylık tamamlanan bakım sayısı - H2 uyumlu
     @Query("SELECT COUNT(b) FROM BakimVeOnarim b WHERE " +
-            "YEAR(b.gercekBitisTarihi) = :yil AND MONTH(b.gercekBitisTarihi) = :ay AND b.durum = 'TAMAMLANDI'")
+            "EXTRACT(YEAR FROM b.gercekBitisTarihi) = :yil AND EXTRACT(MONTH FROM b.gercekBitisTarihi) = :ay AND b.durum = 'TAMAMLANDI'")
     Long countByAylikTamamlanan(@Param("yil") int yil, @Param("ay") int ay);
 
-    // Performans metrikleri
-    @Query("SELECT AVG(DATEDIFF(day, b.baslangicTarihi, b.gercekBitisTarihi)) FROM BakimVeOnarim b " +
+    // Performans metrikleri - H2 uyumlu
+    @Query("SELECT AVG(CAST(b.gercekBitisTarihi - b.baslangicTarihi AS DOUBLE)) FROM BakimVeOnarim b " +
             "WHERE b.durum = 'TAMAMLANDI' AND b.gercekBitisTarihi IS NOT NULL AND b.baslangicTarihi IS NOT NULL")
     Double getOrtalamaBakimSuresi();
 
