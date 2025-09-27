@@ -47,7 +47,7 @@ public class BildirimController {
         boolean basarili = emailService.sendTestEmail(email);
 
         if (basarili) {
-            return ResponseEntity.ok("Test e-maili başarıyla gönderildi: " + email);
+            return ResponseEntity.ok("Test e---maili başarıyla gönderildi: " + email);
         } else {
             return ResponseEntity.badRequest().body("Email gönderilemedi: " + email);
         }
